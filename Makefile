@@ -9,6 +9,10 @@ build: #: Build containers
 up: #: Start containers
 	docker-compose up -d
 
+first up: #: For first start containers
+	docker-compose up -d
+	docker compose exec app bundle exec rake db:create db:migrate db:seed
+
 stop: #: Stop running containers
 	docker-compose stop
 

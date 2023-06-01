@@ -56,4 +56,21 @@ RSpec.describe GameQuestion, type: :model do
       expect(game_question.level).to eq(game_question.question.level)
     end
   end
+
+  context 'answers' do
+    it 'variants' do
+      expect(game_question.variants['a']).to eq(game_question.question.answer2)
+      expect(game_question.variants['b']).to eq(game_question.question.answer1)
+      expect(game_question.variants['c']).to eq(game_question.question.answer4)
+      expect(game_question.variants['d']).to eq(game_question.question.answer3)
+    end
+
+    it 'correct_answer_key' do
+      expect(game_question.variants[game_question.correct_answer_key]).to eq(game_question.question.answer1)
+    end
+
+    it 'correct_answer' do
+      expect(game_question.correct_answer).to eq(game_question.question.answer1)
+    end
+  end
 end
