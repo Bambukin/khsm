@@ -49,7 +49,7 @@ RSpec.describe Game, type: :model do
       q = game_w_questions.current_game_question
       expect(game_w_questions.status).to eq(:in_progress)
 
-      game_w_questions.answer_current_question!(q.correct_answer_key)
+      expect(game_w_questions.answer_current_question!(q.correct_answer_key)).to be true
 
       # перешли на след. уровень
       expect(game_w_questions.current_level).to eq(level + 1)
@@ -59,6 +59,25 @@ RSpec.describe Game, type: :model do
       # игра продолжается
       expect(game_w_questions.status).to eq(:in_progress)
       expect(game_w_questions.finished?).to be_falsey
+    end
+
+    it 'won if last answer correct' do
+      game_w_questions.current_level = Question::QUESTION_LEVELS.max
+      q = game_w_questions.current_game_question
+      expect(game_w_questions.answer_current_question!(q.correct_answer_key)).to be true
+      expect(game_w_questions.status).to eq(:won)
+      expect(game_w_questions.is_failed).to eq(false)
+    end
+
+    it 'answer return false when game finished' do
+      game_w_questions.finished_at = Time.now
+      q = game_w_questions.current_game_question
+      expect(game_w_questions.answer_current_question!(q.correct_answer_key)).to be false
+    end
+
+    it 'wrong answer finish game' do
+      expect(game_w_questions.answer_current_question!('a')).to be false
+      expect(game_w_questions.status).to eq(:fail)
     end
 
     it 'take_money in new game' do
