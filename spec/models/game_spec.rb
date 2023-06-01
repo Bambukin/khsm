@@ -82,14 +82,14 @@ RSpec.describe Game, type: :model do
     end
   end
 
-  context ".status in_progress" do
+  context 'status in_progress' do
     it 'in_progress' do
       expect(game_w_questions.status).to eq :in_progress
       expect(game_w_questions.finished_at).to be nil
     end
   end
 
-  context ".status" do
+  context 'status' do
     before(:each) do
       game_w_questions.finished_at = Time.now
       expect(game_w_questions.finished?).to be true
@@ -111,8 +111,23 @@ RSpec.describe Game, type: :model do
       expect(game_w_questions.status).to eq(:timeout)
     end
 
-    it ':money' do
+    it 'money' do
       expect(game_w_questions.status).to eq(:money)
+    end
+  end
+
+  context 'game_questions' do
+    it 'current_game_question' do
+      game_w_questions.current_level = 5
+      expect(game_w_questions.current_game_question).to be_instance_of(GameQuestion)
+      expect(game_w_questions.current_game_question.level).to eq(5)
+      expect(game_w_questions.current_game_question.level).to eq(game_w_questions.current_level)
+      expect(game_w_questions.current_game_question.level).not_to eq(6)
+    end
+
+    it 'previous_level' do
+      game_w_questions.current_level = 5
+      expect(game_w_questions.previous_level).to eq 4
     end
   end
 end
