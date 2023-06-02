@@ -141,7 +141,6 @@ RSpec.describe Game, type: :model do
       expect(game_w_questions.current_game_question).to be_instance_of(GameQuestion)
       expect(game_w_questions.current_game_question.level).to eq(5)
       expect(game_w_questions.current_game_question.level).to eq(game_w_questions.current_level)
-      expect(game_w_questions.current_game_question.level).not_to eq(6)
     end
 
     it 'previous_level' do
