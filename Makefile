@@ -23,7 +23,7 @@ ps: #: Show running processes
 	docker-compose ps
 
 rspec: #: Run Rspec in running containers (can use arg)
-	docker compose exec app bundle exec rspec $(filter-out $@,$(MAKECMDGOALS))
+	docker compose exec app bundle exec rspec $(filter-out $@,$(MAKECMDGOALS)) --format documentation
 
 
 .PHONY: app test spec lib docs bin config db tmp temp

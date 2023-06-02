@@ -14,136 +14,191 @@ RSpec.describe Game, type: :model do
   let(:game_w_questions) { FactoryGirl.create(:game_with_questions, user: user) }
 
   # Группа тестов на работу фабрики создания новых игр
-  context 'Game Factory' do
-    it 'Game.create_game! new correct game' do
-      # генерим 60 вопросов с 4х запасом по полю level,
-      # чтобы проверить работу RANDOM при создании игры
-      generate_questions(60)
+  describe '.create_game_for_user!' do
+    before { generate_questions(60) }
 
-      game = nil
-      # создaли игру, обернули в блок, на который накладываем проверки
-      expect {
-        game = Game.create_game_for_user!(user)
-      }.to change(Game, :count).by(1).and(# проверка: Game.count изменился на 1 (создали в базе 1 игру)
-        change(GameQuestion, :count).by(15).and(# GameQuestion.count +15
-          change(Question, :count).by(0) # Game.count не должен измениться
-        )
-      )
-      # проверяем статус и поля
-      expect(game.user).to eq(user)
-      expect(game.status).to eq(:in_progress)
-      # проверяем корректность массива игровых вопросов
-      expect(game.game_questions.size).to eq(15)
-      expect(game.game_questions.map(&:level)).to eq (0..14).to_a
+    subject(:create_game) { Game.create_game_for_user!(user) }
+
+    it 'increases game counter' do
+      expect { create_game }.to change(Game, :count).by(1)
+    end
+
+    it 'increases game_question counter' do
+      expect{ create_game }.to change(GameQuestion, :count).by(15)
+    end
+
+    it 'not increase question counter' do
+      expect { create_game }.to change(Question, :count).by(0)
+    end
+
+    it 'sets correct user' do
+      expect(create_game.user).to eq(user)
+    end
+
+    it 'starts game' do
+      expect(create_game.status).to eq(:in_progress)
+    end
+
+    it 'sets right number of game_questions' do
+      expect(create_game.game_questions.size).to eq(Question::QUESTION_LEVELS.size)
+    end
+
+    it 'sets each level of questions' do
+      expect(create_game.game_questions.map(&:level)).to eq Question::QUESTION_LEVELS.to_a
     end
   end
 
+  describe '#answer_current_question!' do
+    before { game_w_questions.answer_current_question!(answer_key) }
 
-  # тесты на основную игровую логику
-  context 'game mechanics' do
+    context 'when answer is correct' do
+      let!(:level) { 0 }
+      let!(:answer_key) { game_w_questions.current_game_question.correct_answer_key }
 
-    # правильный ответ должен продолжать игру
-    it 'answer correct continues game' do
-      # текущий уровень игры и статус
-      level = game_w_questions.current_level
-      q = game_w_questions.current_game_question
-      expect(game_w_questions.status).to eq(:in_progress)
+      context 'and question is last' do
+        let!(:level) { Question::QUESTION_LEVELS.max }
+        let!(:game_w_questions) { FactoryGirl.create(:game_with_questions, user: user, current_level: level) }
 
-      expect(game_w_questions.answer_current_question!(q.correct_answer_key)).to be true
+        it 'assigns final prize' do
+          expect(game_w_questions.prize).to eq(Game::PRIZES.max)
+        end
 
-      # перешли на след. уровень
-      expect(game_w_questions.current_level).to eq(level + 1)
-      # ранее текущий вопрос стал предыдущим
-      expect(game_w_questions.previous_game_question).to eq(q)
-      expect(game_w_questions.current_game_question).not_to eq(q)
-      # игра продолжается
-      expect(game_w_questions.status).to eq(:in_progress)
-      expect(game_w_questions.finished?).to be_falsey
+        it 'finishes the game' do
+          expect(game_w_questions.finished?).to be true
+        end
+
+        it 'finishes with status won' do
+          expect(game_w_questions.status).to eq(:won)
+        end
+
+        it 'makes game not failed' do
+          expect(game_w_questions.is_failed).to eq(false)
+        end
+      end
+
+      context 'and question is not last' do
+        it 'moves to next level' do
+          expect(game_w_questions.current_level).to eq(level + 1)
+        end
+
+        it 'continues game' do
+          expect(game_w_questions.finished?).to be false
+        end
+
+        it 'not change status' do
+          expect(game_w_questions.status).to eq(:in_progress)
+        end
+      end
+
+      context 'and time is over' do
+        let!(:game_w_questions) { FactoryGirl.create(:game_with_questions,
+                                                     user: user,
+                                                     current_level: level,
+                                                     created_at: Game::TIME_LIMIT.minutes.ago) }
+
+        it 'finishes the game' do
+          expect(game_w_questions.finished?).to be true
+        end
+
+        it 'finishes with status timeout' do
+          expect(game_w_questions.status).to eq(:timeout)
+        end
+      end
     end
 
-    it 'won if last answer correct' do
-      game_w_questions.current_level = Question::QUESTION_LEVELS.max
-      q = game_w_questions.current_game_question
-      expect(game_w_questions.answer_current_question!(q.correct_answer_key)).to be true
-      expect(game_w_questions.status).to eq(:won)
-      expect(game_w_questions.is_failed).to eq(false)
+    context 'when answer is wrong' do
+      let!(:answer_key) { game_w_questions.current_game_question.a }
+
+      it 'finishes the game' do
+        expect(game_w_questions.finished?).to be true
+      end
+
+      it 'finishes with status fail' do
+        expect(game_w_questions.status).to eq(:fail)
+      end
+    end
+  end
+
+  describe '#take_money' do
+    before { game_w_questions.take_money! }
+    let!(:game_w_questions) { FactoryGirl.create(:game_with_questions, user: user, current_level: 5) }
+
+    it 'makes prize bigger then 0' do
+      expect(game_w_questions.prize).to be > 0
     end
 
-    it 'answer return false when game finished' do
-      game_w_questions.finished_at = Time.now
-      q = game_w_questions.current_game_question
-      expect(game_w_questions.answer_current_question!(q.correct_answer_key)).to be false
-    end
-
-    it 'wrong answer finish game' do
-      expect(game_w_questions.answer_current_question!('a')).to be false
-      expect(game_w_questions.status).to eq(:fail)
-    end
-
-    it 'take_money in new game' do
-      expect(game_w_questions.take_money!).to be true
-      expect(game_w_questions.prize).to eq(0)
-      expect(game_w_questions.is_failed).to be false
-    end
-
-    it 'take_money' do
-      q = game_w_questions.current_game_question
-      game_w_questions.answer_current_question!(q.correct_answer_key)
-
-      game_w_questions.take_money!
-
-      prize = game_w_questions.prize
-      expect(prize).to be > 0
-
-      expect(game_w_questions.status).to eq :money
+    it 'finishes the game' do
       expect(game_w_questions.finished?).to be true
-      expect(user.balance).to eq prize
-    end
-  end
-
-  context 'status in_progress' do
-    it 'in_progress' do
-      expect(game_w_questions.status).to eq :in_progress
-      expect(game_w_questions.finished_at).to be nil
-    end
-  end
-
-  context 'status' do
-    before(:each) do
-      game_w_questions.finished_at = Time.now
-      expect(game_w_questions.finished?).to be true
     end
 
-    it 'fail' do
-      game_w_questions.is_failed = true
-      expect(game_w_questions.status).to eq(:fail)
-    end
-
-    it 'won' do
-      game_w_questions.current_level = Question::QUESTION_LEVELS.max + 1
-      expect(game_w_questions.status).to eq(:won)
-    end
-
-    it 'timeout' do
-      game_w_questions.created_at = Game::TIME_LIMIT.minutes.ago
-      game_w_questions.is_failed = true
-      expect(game_w_questions.status).to eq(:timeout)
-    end
-
-    it 'money' do
+    it 'finishes with status money' do
       expect(game_w_questions.status).to eq(:money)
     end
+
+    it 'increases the user balance' do
+      expect(user.balance).to eq(game_w_questions.prize)
+    end
   end
 
-  context 'game_questions' do
-    it 'current_game_question' do
-      game_w_questions.current_level = 5
-      expect(game_w_questions.current_game_question).to be_instance_of(GameQuestion)
-      expect(game_w_questions.current_game_question.level).to eq(5)
-      expect(game_w_questions.current_game_question.level).to eq(game_w_questions.current_level)
+  describe '#status' do
+    context 'when game not finished' do
+      it 'returns in_progress' do
+        expect(game_w_questions.status).to eq :in_progress
+        expect(game_w_questions.finished_at).to be nil
+      end
     end
 
-    it 'previous_level' do
+    context 'when game is finished' do
+      before(:each) do
+        game_w_questions.finished_at = Time.now
+        expect(game_w_questions.finished?).to be true
+      end
+
+      context 'and game is failed' do
+        it 'returns fail' do
+          game_w_questions.is_failed = true
+          expect(game_w_questions.status).to eq(:fail)
+        end
+      end
+
+      context 'and level bigger then max' do
+        it 'returns won' do
+          game_w_questions.current_level = Question::QUESTION_LEVELS.max + 1
+          expect(game_w_questions.status).to eq(:won)
+        end
+      end
+
+      context 'and time has passed' do
+        it 'returns timeout' do
+          game_w_questions.created_at = Game::TIME_LIMIT.minutes.ago
+          game_w_questions.is_failed = true
+          expect(game_w_questions.status).to eq(:timeout)
+        end
+      end
+
+      context 'and user took money' do
+        it 'returns money' do
+          game_w_questions.take_money!
+          expect(game_w_questions.status).to eq(:money)
+        end
+      end
+    end
+  end
+
+  describe '#current_game_question' do
+    before(:each) { game_w_questions.current_level = 5 }
+
+    it 'returns instance of GameQuestion' do
+      expect(game_w_questions.current_game_question).to be_instance_of(GameQuestion)
+    end
+
+    it 'sets current level' do
+      expect(game_w_questions.current_game_question.level).to eq(5)
+    end
+  end
+
+  describe '#previous_level' do
+    it 'sets previous level' do
       game_w_questions.current_level = 5
       expect(game_w_questions.previous_level).to eq 4
     end

@@ -11,18 +11,20 @@ RSpec.describe GameQuestion, type: :model do
   let(:game_question) { FactoryGirl.create(:game_question, a: 2, b: 1, c: 4, d: 3) }
 
   # группа тестов на игровое состояние объекта вопроса
-  context 'game status' do
-    # тест на правильную генерацию хэша с вариантами
-    it 'correct .variants' do
-      expect(game_question.variants).to eq({'a' => game_question.question.answer2,
-                                            'b' => game_question.question.answer1,
-                                            'c' => game_question.question.answer4,
-                                            'd' => game_question.question.answer3})
+  # тест на правильную генерацию хэша с вариантами
+  describe '#variants' do
+    it 'returns the correct variants' do
+      expect(game_question.variants).to eq({ 'a' => game_question.question.answer2,
+                                             'b' => game_question.question.answer1,
+                                             'c' => game_question.question.answer4,
+                                             'd' => game_question.question.answer3 })
     end
+  end
 
+  describe '#answer_correct?' do
     it 'correct .answer_correct?' do
       # именно под буквой b в тесте мы спрятали указатель на верный ответ
-      expect(game_question.answer_correct?('b')).to be_truthy
+      expect(game_question.answer_correct?('b')).to be true
     end
   end
 
@@ -34,42 +36,46 @@ RSpec.describe GameQuestion, type: :model do
   # }
   #
 
-  context 'user helpers' do
-    it 'correct audience_help' do
-      expect(game_question.help_hash).not_to include(:audience_help)
+  describe '#add_audience_help' do
+    context 'when add_audience_help is not used' do
+      it 'does not add audience_help in help_hash' do
+        expect(game_question.help_hash).not_to include(:audience_help)
+      end
+    end
+    context 'when add_audience_help is used' do
+      before(:each) { game_question.add_audience_help }
 
-      game_question.add_audience_help
+      it 'adds audience_help in help_hash' do
+        expect(game_question.help_hash).to include(:audience_help)
+      end
 
-      expect(game_question.help_hash).to include(:audience_help)
-
-      ah = game_question.help_hash[:audience_help]
-      expect(ah.keys).to contain_exactly('a', 'b', 'c', 'd')
+      it 'returns all keys' do
+        ah = game_question.help_hash[:audience_help]
+        expect(ah.keys).to contain_exactly('a', 'b', 'c', 'd')
+      end
     end
   end
 
-  context '#text & #level' do
-    it 'correct .text' do
+  describe '#text' do
+    it 'delegates to question' do
       expect(game_question.text).to eq(game_question.question.text)
     end
+  end
 
-    it 'correct .level' do
+  describe '#level' do
+    it 'delegates to question' do
       expect(game_question.level).to eq(game_question.question.level)
     end
   end
 
-  context 'answers' do
-    it 'variants' do
-      expect(game_question.variants['a']).to eq(game_question.question.answer2)
-      expect(game_question.variants['b']).to eq(game_question.question.answer1)
-      expect(game_question.variants['c']).to eq(game_question.question.answer4)
-      expect(game_question.variants['d']).to eq(game_question.question.answer3)
-    end
-
-    it 'correct_answer_key' do
+  describe '#correct_answer_key' do
+    it 'returns first answer from db' do
       expect(game_question.variants[game_question.correct_answer_key]).to eq(game_question.question.answer1)
     end
+  end
 
-    it 'correct_answer' do
+  describe '#correct_answer' do
+    it 'returns correct answer' do
       expect(game_question.correct_answer).to eq(game_question.question.answer1)
     end
   end
