@@ -17,79 +17,201 @@ RSpec.describe GamesController, type: :controller do
   # игра с прописанными игровыми вопросами
   let(:game_w_questions) { FactoryGirl.create(:game_with_questions, user: user) }
 
-  # группа тестов для незалогиненного юзера (Анонимус)
-  context 'Anon' do
-    # из экшена show анона посылаем
-    it 'kick from #show' do
-      # вызываем экшен
-      get :show, id: game_w_questions.id
-      # проверяем ответ
-      expect(response.status).not_to eq(200) # статус не 200 ОК
-      expect(response).to redirect_to(new_user_session_path) # devise должен отправить на логин
-      expect(flash[:alert]).to be # во flash должен быть прописана ошибка
+  describe '#show' do
+    before { get :show, id: game_w_questions.id }
+
+    context 'when user is not signed in' do
+      it 'redirects from show' do
+        expect(response).to redirect_to(new_user_session_path)
+      end
+
+      it 'sets response status not 200' do
+        expect(response.status).not_to eq(200) # статус не 200 ОК
+      end
+
+      it 'sets flash' do
+        expect(flash[:alert]).to be # во flash должен быть прописана ошибка
+      end
+    end
+
+    context 'whet user signed in' do
+      before { sign_in user }
+
+      context 'and user is the owner of the game' do
+        before { get :show, id: game_w_questions.id }
+        let!(:game) { assigns(:game) }
+
+        it 'sets game not finished' do
+          expect(game.finished?).to be_falsey
+        end
+
+        it 'sets response status 200' do
+          expect(response.status).to eq(200)
+        end
+
+        it 'renders show' do
+          expect(response).to render_template('show')
+        end
+
+        it 'not set flash' do
+          expect(flash.empty?).to be true
+        end
+      end
+
+      context 'and user is not the owner of the game' do
+        before { get :show, id: alien_game.id }
+        let!(:alien_game) { FactoryGirl.create(:game_with_questions) }
+
+        it 'redirects from show' do
+          expect(response).to redirect_to(root_path)
+        end
+
+        it 'sets response status not 200' do
+          expect(response.status).not_to eq(200)
+        end
+
+        it 'sets flash' do
+          expect(flash[:alert]).to be
+        end
+      end
     end
   end
 
-  # группа тестов на экшены контроллера, доступных залогиненным юзерам
-  context 'Usual user' do
-    # перед каждым тестом в группе
-    before(:each) { sign_in user } # логиним юзера user с помощью спец. Devise метода sign_in
+  describe '#create' do
+    before { sign_in user }
+    before { generate_questions(15) }
 
-    # юзер может создать новую игру
-    it 'creates game' do
-      # сперва накидаем вопросов, из чего собирать новую игру
-      generate_questions(15)
+    context 'when user has not active game' do
+      before { post :create }
+      let!(:game) { assigns(:game) }
 
-      post :create
-      game = assigns(:game) # вытаскиваем из контроллера поле @game
+      it 'sets status not finished' do
+        expect(game.finished?).to be false
+      end
 
-      # проверяем состояние этой игры
-      expect(game.finished?).to be_falsey
-      expect(game.user).to eq(user)
-      # и редирект на страницу этой игры
-      expect(response).to redirect_to(game_path(game))
-      expect(flash[:notice]).to be
+      it 'redirects to game' do
+        expect(response).to redirect_to(game_path(game))
+      end
+
+      it 'sets flash' do
+        expect(flash[:notice]).to be
+      end
     end
 
-    # юзер видит свою игру
-    it '#show game' do
-      get :show, id: game_w_questions.id
-      game = assigns(:game) # вытаскиваем из контроллера поле @game
-      expect(game.finished?).to be_falsey
-      expect(game.user).to eq(user)
+    context 'when user has active game' do
+      before { game_w_questions }
+      before { post :create }
+      subject(:create_game) { post :create }
+      let!(:game) { assigns(:game) }
 
-      expect(response.status).to eq(200) # должен быть ответ HTTP 200
-      expect(response).to render_template('show') # и отрендерить шаблон show
+      it 'checks that old game did not finish' do
+        expect(game_w_questions.finished?).to be false
+      end
+
+      it 'does not create new game' do
+        expect { create_game }.to change(Game, :count).by(0)
+      end
+
+      it 'sets game nil' do
+        expect(game).to be_nil
+      end
+
+      it 'redirects to old game' do
+        expect(response).to redirect_to(game_path(game_w_questions))
+      end
+
+      it 'sets flash' do
+        expect(flash[:alert]).to be
+      end
+    end
+  end
+
+  describe '#answer' do
+    before { sign_in user }
+
+    context 'when answer is correct' do
+      before { put :answer, id: game_w_questions.id, letter: game_w_questions.current_game_question.correct_answer_key }
+
+      let!(:game) { assigns(:game) }
+
+      it 'does not finish game' do
+        expect(game.finished?).to be false
+      end
+
+      it 'sets next level' do
+        expect(game.current_level).to eq(1)
+      end
+
+      it 'redirects to game' do
+        expect(response).to redirect_to(game_path(game))
+      end
+
+      it 'does not set flash' do
+        expect(flash.empty?).to be true
+      end
+    end
+  end
+
+  describe '#help' do
+    before { sign_in user }
+
+    context 'when use audience help' do
+      before { put :help, id: game_w_questions.id, help_type: :audience_help }
+
+      let!(:game) { assigns(:game) }
+
+      it 'does not finish game' do
+        expect(game.finished?).to be false
+      end
+
+      it 'toggles audience_help_used' do
+        expect(game.audience_help_used).to be true
+      end
+
+      it 'adds audience_help to help_hash' do
+        expect(game.current_game_question.help_hash[:audience_help]).to be
+      end
+
+      it 'redirects to game' do
+        expect(response).to redirect_to(game_path(game))
+      end
+
+      it 'returns all keys' do
+        expect(game.current_game_question.help_hash[:audience_help].keys).to contain_exactly('a', 'b', 'c', 'd')
+      end
+
+      it 'sets flash' do
+        expect(flash[:info]).to be
+      end
+    end
+  end
+
+  describe '#take_money' do
+    before { sign_in user }
+    before { game_w_questions.update_attribute(:current_level, 2) }
+    before { put :take_money, id: game_w_questions.id }
+
+    let!(:game) { assigns(:game) }
+
+    it 'sets flash' do
+      expect(flash[:warning]).to be
     end
 
-    # юзер отвечает на игру корректно - игра продолжается
-    it 'answers correct' do
-      # передаем параметр params[:letter]
-      put :answer, id: game_w_questions.id, letter: game_w_questions.current_game_question.correct_answer_key
-      game = assigns(:game)
-
-      expect(game.finished?).to be_falsey
-      expect(game.current_level).to be > 0
-      expect(response).to redirect_to(game_path(game))
-      expect(flash.empty?).to be_truthy # удачный ответ не заполняет flash
+    it 'redirects to user' do
+      expect(response).to redirect_to(user_path(user))
     end
 
-    # тест на отработку "помощи зала"
-    it 'uses audience help' do
-      # сперва проверяем что в подсказках текущего вопроса пусто
-      expect(game_w_questions.current_game_question.help_hash[:audience_help]).not_to be
-      expect(game_w_questions.audience_help_used).to be_falsey
+    it 'finish game' do
+      expect(game.finished?).to be true
+    end
 
-      # фигачим запрос в контроллен с нужным типом
-      put :help, id: game_w_questions.id, help_type: :audience_help
-      game = assigns(:game)
+    it 'sets prize' do
+      expect(game.prize).to eq(Game::PRIZES[1])
+    end
 
-      # проверяем, что игра не закончилась, что флажок установился, и подсказка записалась
-      expect(game.finished?).to be_falsey
-      expect(game.audience_help_used).to be_truthy
-      expect(game.current_game_question.help_hash[:audience_help]).to be
-      expect(game.current_game_question.help_hash[:audience_help].keys).to contain_exactly('a', 'b', 'c', 'd')
-      expect(response).to redirect_to(game_path(game))
+    it 'updates user balance' do
+      user.reload
+      expect(user.balance).to eq(Game::PRIZES[1])
     end
   end
 end

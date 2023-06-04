@@ -27,7 +27,7 @@ RSpec.describe Game, type: :model do
       expect{ create_game }.to change(GameQuestion, :count).by(15)
     end
 
-    it 'not increase question counter' do
+    it 'does not increase question counter' do
       expect { create_game }.to change(Question, :count).by(0)
     end
 
@@ -85,7 +85,7 @@ RSpec.describe Game, type: :model do
           expect(game_w_questions.finished?).to be false
         end
 
-        it 'not change status' do
+        it 'does not change status' do
           expect(game_w_questions.status).to eq(:in_progress)
         end
       end
