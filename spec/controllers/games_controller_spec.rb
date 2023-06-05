@@ -21,20 +21,20 @@ RSpec.describe GamesController, type: :controller do
     before { get :show, id: game_w_questions.id }
 
     context 'when user is not signed in' do
-      it 'redirects from show' do
+      it 'redirects to login' do
         expect(response).to redirect_to(new_user_session_path)
       end
 
       it 'sets response status not 200' do
-        expect(response.status).not_to eq(200) # статус не 200 ОК
+        expect(response.status).not_to eq(200)
       end
 
       it 'sets flash' do
-        expect(flash[:alert]).to be # во flash должен быть прописана ошибка
+        expect(flash[:alert]).to be
       end
     end
 
-    context 'whet user signed in' do
+    context 'when user signed in' do
       before { sign_in user }
 
       context 'and user is the owner of the game' do
@@ -78,35 +78,12 @@ RSpec.describe GamesController, type: :controller do
   end
 
   describe '#create' do
-    before { sign_in user }
     before { generate_questions(15) }
 
-    context 'when user has not active game' do
-      before { post :create }
-      let!(:game) { assigns(:game) }
-
-      it 'sets status not finished' do
-        expect(game.finished?).to be false
-      end
-
-      it 'redirects to game' do
-        expect(response).to redirect_to(game_path(game))
-      end
-
-      it 'sets flash' do
-        expect(flash[:notice]).to be
-      end
-    end
-
-    context 'when user has active game' do
-      before { game_w_questions }
+    context 'when user is not signed in' do
       before { post :create }
       subject(:create_game) { post :create }
       let!(:game) { assigns(:game) }
-
-      it 'checks that old game did not finish' do
-        expect(game_w_questions.finished?).to be false
-      end
 
       it 'does not create new game' do
         expect { create_game }.to change(Game, :count).by(0)
@@ -116,102 +93,227 @@ RSpec.describe GamesController, type: :controller do
         expect(game).to be_nil
       end
 
-      it 'redirects to old game' do
-        expect(response).to redirect_to(game_path(game_w_questions))
+      it 'redirects to login' do
+        expect(response).to redirect_to(new_user_session_path)
       end
 
       it 'sets flash' do
         expect(flash[:alert]).to be
       end
+
+      it 'sets response status not 200' do
+        expect(response.status).not_to eq(200)
+      end
+    end
+
+    context 'whet user signed in' do
+      before { sign_in user }
+
+      context 'when user has not active game' do
+        before { post :create }
+        let!(:game) { assigns(:game) }
+
+        it 'sets status not finished' do
+          expect(game.finished?).to be false
+        end
+
+        it 'redirects to game' do
+          expect(response).to redirect_to(game_path(game))
+        end
+
+        it 'sets flash' do
+          expect(flash[:notice]).to be
+        end
+      end
+
+      context 'when user has active game' do
+        before { game_w_questions }
+        before { post :create }
+        subject(:create_game) { post :create }
+        let!(:game) { assigns(:game) }
+
+        it 'checks that old game did not finish' do
+          expect(game_w_questions.finished?).to be false
+        end
+
+        it 'does not create new game' do
+          expect { create_game }.to change(Game, :count).by(0)
+        end
+
+        it 'sets game nil' do
+          expect(game).to be_nil
+        end
+
+        it 'redirects to old game' do
+          expect(response).to redirect_to(game_path(game_w_questions))
+        end
+
+        it 'sets flash' do
+          expect(flash[:alert]).to be
+        end
+      end
     end
   end
 
   describe '#answer' do
-    before { sign_in user }
-
-    context 'when answer is correct' do
+    context 'when user is not signed in' do
       before { put :answer, id: game_w_questions.id, letter: game_w_questions.current_game_question.correct_answer_key }
 
       let!(:game) { assigns(:game) }
 
-      it 'does not finish game' do
-        expect(game.finished?).to be false
+      it 'sets game nil' do
+        expect(game).to be_nil
       end
 
-      it 'sets next level' do
-        expect(game.current_level).to eq(1)
+      it 'redirects to login' do
+        expect(response).to redirect_to(new_user_session_path)
       end
 
-      it 'redirects to game' do
-        expect(response).to redirect_to(game_path(game))
+      it 'sets flash' do
+        expect(flash[:alert]).to be
       end
 
-      it 'does not set flash' do
-        expect(flash.empty?).to be true
+      it 'sets response status not 200' do
+        expect(response.status).not_to eq(200)
+      end
+    end
+
+    context 'when user signed in' do
+      before { sign_in user }
+
+      context 'and answer is correct' do
+        before { put :answer, id: game_w_questions.id, letter: game_w_questions.current_game_question.correct_answer_key }
+
+        let!(:game) { assigns(:game) }
+
+        it 'does not finish game' do
+          expect(game.finished?).to be false
+        end
+
+        it 'sets next level' do
+          expect(game.current_level).to eq(1)
+        end
+
+        it 'redirects to game' do
+          expect(response).to redirect_to(game_path(game))
+        end
+
+        it 'does not set flash' do
+          expect(flash.empty?).to be true
+        end
       end
     end
   end
 
   describe '#help' do
-    before { sign_in user }
-
-    context 'when use audience help' do
+    context 'when user is not signed in' do
       before { put :help, id: game_w_questions.id, help_type: :audience_help }
 
       let!(:game) { assigns(:game) }
 
-      it 'does not finish game' do
-        expect(game.finished?).to be false
+      it 'sets game nil' do
+        expect(game).to be_nil
       end
 
-      it 'toggles audience_help_used' do
-        expect(game.audience_help_used).to be true
-      end
-
-      it 'adds audience_help to help_hash' do
-        expect(game.current_game_question.help_hash[:audience_help]).to be
-      end
-
-      it 'redirects to game' do
-        expect(response).to redirect_to(game_path(game))
-      end
-
-      it 'returns all keys' do
-        expect(game.current_game_question.help_hash[:audience_help].keys).to contain_exactly('a', 'b', 'c', 'd')
+      it 'redirects to login' do
+        expect(response).to redirect_to(new_user_session_path)
       end
 
       it 'sets flash' do
-        expect(flash[:info]).to be
+        expect(flash[:alert]).to be
+      end
+
+      it 'sets response status not 200' do
+        expect(response.status).not_to eq(200)
+      end
+    end
+
+    context 'when user signed in' do
+      before { sign_in user }
+
+      context 'and use audience help' do
+        before { put :help, id: game_w_questions.id, help_type: :audience_help }
+
+        let!(:game) { assigns(:game) }
+
+        it 'does not finish game' do
+          expect(game.finished?).to be false
+        end
+
+        it 'toggles audience_help_used' do
+          expect(game.audience_help_used).to be true
+        end
+
+        it 'adds audience_help to help_hash' do
+          expect(game.current_game_question.help_hash[:audience_help]).to be
+        end
+
+        it 'redirects to game' do
+          expect(response).to redirect_to(game_path(game))
+        end
+
+        it 'returns all keys' do
+          expect(game.current_game_question.help_hash[:audience_help].keys).to contain_exactly('a', 'b', 'c', 'd')
+        end
+
+        it 'sets flash' do
+          expect(flash[:info]).to be
+        end
       end
     end
   end
 
   describe '#take_money' do
-    before { sign_in user }
-    before { game_w_questions.update_attribute(:current_level, 2) }
-    before { put :take_money, id: game_w_questions.id }
+    context 'when user is not signed in' do
+      before { game_w_questions.update_attribute(:current_level, 2) }
+      before { put :take_money, id: game_w_questions.id }
 
-    let!(:game) { assigns(:game) }
+      let!(:game) { assigns(:game) }
 
-    it 'sets flash' do
-      expect(flash[:warning]).to be
+      it 'sets game nil' do
+        expect(game).to be_nil
+      end
+
+      it 'redirects to login' do
+        expect(response).to redirect_to(new_user_session_path)
+      end
+
+      it 'sets flash' do
+        expect(flash[:alert]).to be
+      end
+
+      it 'sets response status not 200' do
+        expect(response.status).not_to eq(200)
+      end
     end
 
-    it 'redirects to user' do
-      expect(response).to redirect_to(user_path(user))
-    end
+    context 'when user signed in' do
+      before { sign_in user }
+      before { game_w_questions.update_attribute(:current_level, 2) }
+      before { put :take_money, id: game_w_questions.id }
 
-    it 'finish game' do
-      expect(game.finished?).to be true
-    end
+      let!(:game) { assigns(:game) }
 
-    it 'sets prize' do
-      expect(game.prize).to eq(Game::PRIZES[1])
-    end
+      it 'sets flash' do
+        expect(flash[:warning]).to be
+      end
 
-    it 'updates user balance' do
-      user.reload
-      expect(user.balance).to eq(Game::PRIZES[1])
+      it 'redirects to user' do
+        expect(response).to redirect_to(user_path(user))
+      end
+
+      it 'finish game' do
+        expect(game.finished?).to be true
+      end
+
+      it 'sets prize' do
+        expect(game.prize).to eq(Game::PRIZES[1])
+      end
+
+      it 'updates user balance' do
+        user.reload
+        expect(user.balance).to eq(Game::PRIZES[1])
+      end
     end
   end
 end
