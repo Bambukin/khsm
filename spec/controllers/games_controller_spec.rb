@@ -11,11 +11,11 @@ require 'support/my_spec_helper' # наш собственный класс с �
 #
 RSpec.describe GamesController, type: :controller do
   # обычный пользователь
-  let(:user) { FactoryGirl.create(:user) }
+  let(:user) { create(:user) }
   # админ
-  let(:admin) { FactoryGirl.create(:user, is_admin: true) }
+  let(:admin) { create(:user, is_admin: true) }
   # игра с прописанными игровыми вопросами
-  let(:game_w_questions) { FactoryGirl.create(:game_with_questions, user: user) }
+  let(:game_w_questions) { create(:game_with_questions, user: user) }
 
   describe '#show' do
     before { get :show, id: game_w_questions.id }
@@ -60,7 +60,7 @@ RSpec.describe GamesController, type: :controller do
 
       context 'and user is not the owner of the game' do
         before { get :show, id: alien_game.id }
-        let!(:alien_game) { FactoryGirl.create(:game_with_questions) }
+        let!(:alien_game) { FactoryBot.create(:game_with_questions) }
 
         it 'redirects from show' do
           expect(response).to redirect_to(root_path)

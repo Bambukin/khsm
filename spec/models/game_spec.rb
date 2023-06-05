@@ -8,10 +8,10 @@ require 'support/my_spec_helper' # наш собственный класс с �
 # в этом классе содержится ключевая логика игры и значит работы сайта.
 RSpec.describe Game, type: :model do
   # пользователь для создания игр
-  let(:user) { FactoryGirl.create(:user) }
+  let(:user) { create(:user) }
 
   # игра с прописанными игровыми вопросами
-  let(:game_w_questions) { FactoryGirl.create(:game_with_questions, user: user) }
+  let(:game_w_questions) { create(:game_with_questions, user: user) }
 
   # Группа тестов на работу фабрики создания новых игр
   describe '.create_game_for_user!' do
@@ -24,7 +24,7 @@ RSpec.describe Game, type: :model do
     end
 
     it 'increases game_question counter' do
-      expect{ create_game }.to change(GameQuestion, :count).by(15)
+      expect { create_game }.to change(GameQuestion, :count).by(15)
     end
 
     it 'does not increase question counter' do
@@ -57,7 +57,7 @@ RSpec.describe Game, type: :model do
 
       context 'and question is last' do
         let!(:level) { Question::QUESTION_LEVELS.max }
-        let!(:game_w_questions) { FactoryGirl.create(:game_with_questions, user: user, current_level: level) }
+        let!(:game_w_questions) { FactoryBot.create(:game_with_questions, user: user, current_level: level) }
 
         it 'assigns final prize' do
           expect(game_w_questions.prize).to eq(Game::PRIZES.max)
@@ -91,10 +91,12 @@ RSpec.describe Game, type: :model do
       end
 
       context 'and time is over' do
-        let!(:game_w_questions) { FactoryGirl.create(:game_with_questions,
-                                                     user: user,
-                                                     current_level: level,
-                                                     created_at: Game::TIME_LIMIT.minutes.ago) }
+        let!(:game_w_questions) do
+          FactoryBot.create(:game_with_questions,
+                             user: user,
+                             current_level: level,
+                             created_at: Game::TIME_LIMIT.minutes.ago)
+        end
 
         it 'finishes the game' do
           expect(game_w_questions.finished?).to be true
@@ -107,7 +109,7 @@ RSpec.describe Game, type: :model do
     end
 
     context 'when answer is wrong' do
-      let!(:answer_key) { game_w_questions.current_game_question.a }
+      let!(:answer_key) { %w[a b c d].grep_v(game_w_questions.current_game_question.correct_answer_key).sample }
 
       it 'finishes the game' do
         expect(game_w_questions.finished?).to be true
@@ -121,7 +123,7 @@ RSpec.describe Game, type: :model do
 
   describe '#take_money' do
     before { game_w_questions.take_money! }
-    let!(:game_w_questions) { FactoryGirl.create(:game_with_questions, user: user, current_level: 5) }
+    let!(:game_w_questions) { FactoryBot.create(:game_with_questions, user: user, current_level: 5) }
 
     it 'makes prize bigger then 0' do
       expect(game_w_questions.prize).to be > 0
