@@ -202,6 +202,38 @@ RSpec.describe GamesController, type: :controller do
           expect(flash.empty?).to be true
         end
       end
+
+      context 'and answer is wrong' do
+        let!(:game_w_questions) { create(:game_with_questions, user: user, current_level: Game::FIREPROOF_LEVELS[0] + 1) }
+        before do
+          put :answer,
+              id: game_w_questions.id,
+              letter: %w[a b c d].grep_v(game_w_questions.current_game_question.correct_answer_key).sample
+        end
+
+        let!(:game) { assigns(:game) }
+
+        it 'finishes game' do
+          expect(game.finished?).to be true
+        end
+
+        it 'redirects to user' do
+          expect(response).to redirect_to(user_path(user))
+        end
+
+        it 'sets flash' do
+          expect(flash[:alert]).to be
+        end
+
+        it 'sets prize' do
+          expect(game.prize).to eq(Game::PRIZES[Game::FIREPROOF_LEVELS[0]])
+        end
+
+        it 'updates user balance' do
+          user.reload
+          expect(user.balance).to eq(Game::PRIZES[Game::FIREPROOF_LEVELS[0]])
+        end
+      end
     end
   end
 
