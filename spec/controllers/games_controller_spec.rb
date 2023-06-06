@@ -239,7 +239,7 @@ RSpec.describe GamesController, type: :controller do
 
   describe '#help' do
     context 'when user is not signed in' do
-      context 'and use audience help' do
+      context 'and use any help' do
         before { put :help, id: game_w_questions.id, help_type: :audience_help }
 
         let!(:game) { assigns(:game) }
@@ -288,6 +288,70 @@ RSpec.describe GamesController, type: :controller do
 
         it 'returns all keys' do
           expect(game.current_game_question.help_hash[:audience_help].keys).to contain_exactly('a', 'b', 'c', 'd')
+        end
+
+        it 'sets flash' do
+          expect(flash[:info]).to be
+        end
+      end
+
+      context 'and use fifty_fifty help' do
+        before { put :help, id: game_w_questions.id, help_type: :fifty_fifty }
+
+        let!(:game) { assigns(:game) }
+
+        it 'does not finish game' do
+          expect(game.finished?).to be false
+        end
+
+        it 'toggles fifty_fifty_used' do
+          expect(game.fifty_fifty_used).to be true
+        end
+
+        it 'adds fifty_fifty to help_hash' do
+          expect(game.current_game_question.help_hash[:fifty_fifty]).to be
+        end
+
+        it 'redirects to game' do
+          expect(response).to redirect_to(game_path(game))
+        end
+
+        it 'returns array with 2 elements' do
+          expect(game.current_game_question.help_hash[:fifty_fifty].size).to eq(2)
+        end
+
+        it 'includes correct_answer_key' do
+          expect(game.current_game_question.help_hash[:fifty_fifty]).to include(game.current_game_question.correct_answer_key)
+        end
+
+        it 'sets flash' do
+          expect(flash[:info]).to be
+        end
+      end
+
+      context 'and use friend_call help' do
+        before { put :help, id: game_w_questions.id, help_type: :friend_call }
+
+        let!(:game) { assigns(:game) }
+
+        it 'does not finish game' do
+          expect(game.finished?).to be false
+        end
+
+        it 'toggles friend_call_used' do
+          expect(game.friend_call_used).to be true
+        end
+
+        it 'adds friend_call to help_hash' do
+          expect(game.current_game_question.help_hash[:friend_call]).to be
+        end
+
+        it 'redirects to game' do
+          expect(response).to redirect_to(game_path(game))
+        end
+
+        it 'returns string' do
+          expect(game.current_game_question.help_hash[:friend_call]).to be_instance_of(String)
         end
 
         it 'sets flash' do

@@ -37,11 +37,20 @@ RSpec.describe GameQuestion, type: :model do
   #
 
   describe '#add_audience_help' do
-    context 'when add_audience_help is not used' do
+    context 'when help is not used' do
       it 'does not add audience_help in help_hash' do
         expect(game_question.help_hash).not_to include(:audience_help)
       end
+
+      it 'does not add fifty_fifty in help_hash' do
+        expect(game_question.help_hash).not_to include(:fifty_fifty)
+      end
+
+      it 'does not add friend_call in help_hash' do
+        expect(game_question.help_hash).not_to include(:friend_call)
+      end
     end
+
     context 'when add_audience_help is used' do
       before(:each) { game_question.add_audience_help }
 
@@ -52,6 +61,36 @@ RSpec.describe GameQuestion, type: :model do
       it 'returns all keys' do
         ah = game_question.help_hash[:audience_help]
         expect(ah.keys).to contain_exactly('a', 'b', 'c', 'd')
+      end
+    end
+
+    context 'when fifty_fifty is used' do
+      before(:each) { game_question.add_fifty_fifty }
+      let!(:ff) { game_question.help_hash[:fifty_fifty] }
+
+      it 'adds fifty_fifty in help_hash' do
+        expect(game_question.help_hash).to include(:fifty_fifty)
+      end
+
+      it 'returns array with 2 elements' do
+        expect(ff.size).to eq(2)
+      end
+
+      it 'includes correct_answer_key' do
+        expect(ff).to include(game_question.correct_answer_key)
+      end
+    end
+
+    context 'when friend_call is used' do
+      before(:each) { game_question.add_friend_call }
+      let!(:fc) { game_question.help_hash[:friend_call] }
+
+      it 'adds friend_call in help_hash' do
+        expect(game_question.help_hash).to include(:friend_call)
+      end
+
+      it 'returns string' do
+        expect(fc).to be_instance_of(String)
       end
     end
   end
