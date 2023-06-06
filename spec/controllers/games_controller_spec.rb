@@ -18,9 +18,9 @@ RSpec.describe GamesController, type: :controller do
   let(:game_w_questions) { create(:game_with_questions, user: user) }
 
   describe '#show' do
-    before { get :show, id: game_w_questions.id }
-
     context 'when user is not signed in' do
+      before { get :show, id: game_w_questions.id }
+
       it 'redirects to login' do
         expect(response).to redirect_to(new_user_session_path)
       end
@@ -42,7 +42,7 @@ RSpec.describe GamesController, type: :controller do
         let!(:game) { assigns(:game) }
 
         it 'sets game not finished' do
-          expect(game.finished?).to be_falsey
+          expect(game.finished?).to be false
         end
 
         it 'sets response status 200' do
@@ -60,7 +60,7 @@ RSpec.describe GamesController, type: :controller do
 
       context 'and user is not the owner of the game' do
         before { get :show, id: alien_game.id }
-        let!(:alien_game) { FactoryBot.create(:game_with_questions) }
+        let!(:alien_game) { create(:game_with_questions) }
 
         it 'redirects from show' do
           expect(response).to redirect_to(root_path)
@@ -106,7 +106,7 @@ RSpec.describe GamesController, type: :controller do
       end
     end
 
-    context 'whet user signed in' do
+    context 'when user signed in' do
       before { sign_in user }
 
       context 'when user has not active game' do
@@ -239,24 +239,26 @@ RSpec.describe GamesController, type: :controller do
 
   describe '#help' do
     context 'when user is not signed in' do
-      before { put :help, id: game_w_questions.id, help_type: :audience_help }
+      context 'and use audience help' do
+        before { put :help, id: game_w_questions.id, help_type: :audience_help }
 
-      let!(:game) { assigns(:game) }
+        let!(:game) { assigns(:game) }
 
-      it 'sets game nil' do
-        expect(game).to be_nil
-      end
+        it 'sets game nil' do
+          expect(game).to be_nil
+        end
 
-      it 'redirects to login' do
-        expect(response).to redirect_to(new_user_session_path)
-      end
+        it 'redirects to login' do
+          expect(response).to redirect_to(new_user_session_path)
+        end
 
-      it 'sets flash' do
-        expect(flash[:alert]).to be
-      end
+        it 'sets flash' do
+          expect(flash[:alert]).to be
+        end
 
-      it 'sets response status not 200' do
-        expect(response.status).not_to eq(200)
+        it 'sets response status not 200' do
+          expect(response.status).not_to eq(200)
+        end
       end
     end
 

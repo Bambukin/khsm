@@ -79,4 +79,32 @@ RSpec.describe GameQuestion, type: :model do
       expect(game_question.correct_answer).to eq(game_question.question.answer1)
     end
   end
+
+  describe '#help_hash' do
+    context 'when help_hash did not use' do
+      it 'sets help_hash empty' do
+        expect(game_question.help_hash).to eq({})
+      end
+    end
+
+    context 'when help_hash used' do
+      before { game_question.help_hash[:test_key] = 'test value' }
+
+      it 'saves model' do
+        expect(game_question.save).to be true
+      end
+
+      it 'adds key to hash' do
+        game_question.save
+        gq = GameQuestion.find(game_question.id)
+        expect(gq.help_hash).to have_key(:test_key)
+      end
+
+      it 'adds value to hash' do
+        game_question.save
+        gq = GameQuestion.find(game_question.id)
+        expect(gq.help_hash[:test_key]).to eq('test value')
+      end
+    end
+  end
 end

@@ -123,7 +123,7 @@ RSpec.describe Game, type: :model do
 
   describe '#take_money' do
     before { game_w_questions.take_money! }
-    let!(:game_w_questions) { FactoryBot.create(:game_with_questions, user: user, current_level: 5) }
+    let!(:game_w_questions) { create(:game_with_questions, user: user, current_level: 5) }
 
     it 'makes prize bigger then 0' do
       expect(game_w_questions.prize).to be > 0
