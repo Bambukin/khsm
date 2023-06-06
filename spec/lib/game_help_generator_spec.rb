@@ -9,8 +9,8 @@ RSpec.describe GameHelpGenerator do
 
     context 'when key is wrong' do
       it 'returns correct message' do
-        allow(keys).to receive(:sample).and_return('KEY3')
-        allow(GameHelpGenerator).to receive(:rand).with(10).and_return(2)
+        allow(keys).to receive_message_chain(:grep_v, :sample).and_return('KEY3')
+        allow(GameHelpGenerator).to receive(:rand).with(1..100).and_return(90)
 
         result = GameHelpGenerator.friend_call(keys, correct_key)
         expect(result).to eq('Default Friend считает, что это вариант KEY3')
@@ -19,7 +19,7 @@ RSpec.describe GameHelpGenerator do
 
     context 'when key is correct' do
       it 'returns correct message' do
-        allow(GameHelpGenerator).to receive(:rand).with(10).and_return(3)
+        allow(GameHelpGenerator).to receive(:rand).with(1..100).and_return(70)
 
         result = GameHelpGenerator.friend_call(keys, correct_key)
         expect(result).to eq('Default Friend считает, что это вариант KEY2')

@@ -4,6 +4,8 @@
 class GameHelpGenerator
   # сколько всего виртуальных зрителей в игре (в процентах получается)
   TOTAL_WATCHERS = 100
+  MIN_PROBABILITY = 80
+
 
   # Возвращает hash c массивом ключей keys и значениями - распределением в процентах
   # correct_key - ключ правильного ответа, он будет выбран с бОльшим весом
@@ -30,7 +32,7 @@ class GameHelpGenerator
   # correct_key - ключ правильного ответа, он будет выбран с бОльшим весом
   def self.friend_call(keys, correct_key)
     # c ~80% вероятностью выбираем правильный ключ, и с 20% - неправильный
-    key = (rand(10) > 2) ? correct_key : keys.sample
+    key = (rand(1..100) < MIN_PROBABILITY) ? correct_key : keys.grep_v(correct_key).sample
 
     I18n.t('game_help.friend_call', name: I18n.t('game_help.friends').sample, variant: key.upcase)
   end
