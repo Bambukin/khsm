@@ -1,28 +1,26 @@
 require 'rails_helper'
-require_relative '../../lib/game_help_generator'
 
 RSpec.describe GameHelpGenerator do
   describe ".friend_call" do
     before { allow(I18n.t('game_help.friends')).to receive(:sample).and_return('Default Friend') }
-    let!(:keys) { %w[key1 key3 key4] }
-    let!(:correct_key) { 'key2' }
+    let!(:keys) { %w[key1 key2 key3 key4] }
+    let!(:correct_key) { 'key1' }
 
     context 'when key is wrong' do
       it 'returns correct message' do
-        allow(keys).to receive_message_chain(:grep_v, :sample).and_return('KEY3')
-        allow(GameHelpGenerator).to receive(:rand).with(1..100).and_return(90)
+        allow(GameHelpGenerator).to receive(:random_of_hundred).and_return(90)
 
         result = GameHelpGenerator.friend_call(keys, correct_key)
-        expect(result).to eq('Default Friend считает, что это вариант KEY3')
+        expect(result).to match(/\ADefault Friend считает, что это вариант KEY[2-4]\z/)
       end
     end
 
     context 'when key is correct' do
       it 'returns correct message' do
-        allow(GameHelpGenerator).to receive(:rand).with(1..100).and_return(70)
+        allow(GameHelpGenerator).to receive(:random_of_hundred).and_return(70)
 
         result = GameHelpGenerator.friend_call(keys, correct_key)
-        expect(result).to eq('Default Friend считает, что это вариант KEY2')
+        expect(result).to eq('Default Friend считает, что это вариант KEY1')
       end
     end
   end
