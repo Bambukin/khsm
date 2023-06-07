@@ -6,7 +6,6 @@ class GameHelpGenerator
   TOTAL_WATCHERS = 100
   MIN_PROBABILITY = 80
 
-
   # Возвращает hash c массивом ключей keys и значениями - распределением в процентах
   # correct_key - ключ правильного ответа, он будет выбран с бОльшим весом
   def self.audience_distribution(keys, correct_key)
