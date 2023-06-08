@@ -9,7 +9,7 @@ class GameHelpGenerator
   # Возвращает hash c массивом ключей keys и значениями - распределением в процентах
   # correct_key - ключ правильного ответа, он будет выбран с бОльшим весом
   def self.audience_distribution(keys, correct_key)
-     result_array = keys.map do |key|
+    result_array = keys.map do |key|
       if key == correct_key
         rand(45..90)
       else
@@ -34,8 +34,6 @@ class GameHelpGenerator
 
     I18n.t('game_help.friend_call', name: I18n.t('game_help.friends').sample, variant: key.upcase)
   end
-
-  private
 
   def self.random_of_hundred
     rand(1..100)
