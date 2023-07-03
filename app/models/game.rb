@@ -64,7 +64,7 @@ class Game < ActiveRecord::Base
 
   # текущий, еще неотвеченный вопрос игры
   def current_game_question
-    game_questions.detect { |q| q.question.level == current_level }
+    game_questions.joins(:question).where(questions: { level: current_level }).first
   end
 
   # -1 для новой игры!
